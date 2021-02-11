@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: An AWS Serverless Specification template describing your function.
+Globals:
+  Function:
+    Handler: lambda_function.lambda_handler
+    Runtime: python3.8
+    MemorySize: 128
+    Timeout: 3
+    Environment:
+      Variables:
+        DB_PREFIX: !Join
+          - ''
+          - - !Ref AWS::StackName
+            - '.'
+Resources:
+  requeueinfifo:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: functions/sip-requeue
+      Description: ''
+      Policies:
+        - SQSPollerPolicy:
+            QueueName:
+              !GetAtt SQSQueue1.QueueName
+        - SQSSendMessagePolicy:
+            QueueName:
+              !GetAtt SQSQueue1.QueueName
+      Events:
+        BucketEvent1:
+          Type: S3
+          Properties:
+            Bucket:
+              Ref: Bucket1
+            Events:
+              - 's3:ObjectRemoved:*'
+        BucketEvent2:
+          Type: S3
+          Properties:
+            Bucket:
+              Ref: Bucket1
+            Events:
+              - 's3:ObjectCreated:*'
+      Environment:
+        Variables:
+          SQS_NUM_MESSAGE_GROUPS: '16'
+          SQS_TARGET_URL: !Ref SQSQueue1
+  s3logevent:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: functions/sip-handler
+      Description: ''
+      Policies:
+        - AmazonDynamoDBFullAccess
+      Events:
+        SQS1:
+          Type: SQS
+          Properties:
+            Queue:
+              'Fn::GetAtt':
+                - SQSQueue1
+                - Arn
+            BatchSize: 10
+  siprest:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: functions/sip-rest
+      Description: ''
+      Events:
+        Api1:
+          Type: Api
+          Properties:
+            Path: /admin/sip
+            Method: ANY
+      Environment:
+        Variables:
+          AWS_BUCKET: !Ref Bucket1
+  SQSQueue1:
+    Type: 'AWS::SQS::Queue'
+    Properties:
+      FifoQueue: true
+  Bucket1:
+    Type: 'AWS::S3::Bucket'
