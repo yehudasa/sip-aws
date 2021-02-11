@@ -5,11 +5,19 @@ def bilog_table_settings_cb():
     return {
         'KeySchema': [
             {
-                'AttributeName': 'entry_id',
+                'AttributeName': 'bucket_shard_id',
                 'KeyType': 'HASH'  # Partition key
+            },
+            {
+                'AttributeName': 'entry_id',
+                'KeyType': 'RANGE'  # Partition key
             },
         ],
         'AttributeDefinitions': [
+            {
+                'AttributeName': 'bucket_shard_id',
+                'AttributeType': 'S'
+            },
             {
                 'AttributeName': 'entry_id',
                 'AttributeType': 'S'
@@ -20,7 +28,9 @@ def bilog_table_settings_cb():
 
 class BILog:
     def __init__(self, bucket, group_id):
-        self.table_name = env_params.db_prefix + 'bilog.%s.%d' % (bucket, group_id)
+        self.table_name = env_params.db_prefix + 'bilog'
+        self.bucket = bucket
+        self.shard_id = group_id
 
         self.dbtable = get_table(self.table_name, bilog_table_settings_cb)
         logger.info("Table %s status: %s" % (self.table_name, self.dbtable.table_status))
@@ -31,7 +41,8 @@ class BILog:
                   
         logger.info("Table %s status: %s" % (self.table_name, self.dbtable.table_status))
     
-        key = { 'entry_id': bilog_key }
+        key = { 'bucket_shard_id': '%s.%s' % (self.bucket, self.shard_id),
+                'entry_id': bilog_key }
     
         try:
             self.dbtable.update_item(

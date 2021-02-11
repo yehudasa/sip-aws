@@ -13,9 +13,18 @@ def handle_s3_event(fifo_seq, group_id, event):
     logger.info(event)
 
     s3 = event['s3']
-    bucket = s3['bucket']['name']
+    s3_bucket = s3['bucket']['name']
     obj = s3['object']
-    obj_key = obj['key']
+    s3_obj_key = obj['key']
+    
+    arr = s3_obj_key.split('/', 1)
+    
+    if len(arr) == 2:
+        bucket, obj_key = arr
+    else:
+        bucket = env_params.top_level_bucket
+        obj_key = s3_obj_key
+    
 
     obj_seq = int(obj['sequencer'], 16)
 
@@ -28,24 +37,24 @@ def handle_s3_event(fifo_seq, group_id, event):
         logger.info('NOTICE: not storing bilog key for %s/%s' % (bucket, obj_key))
         return
     
-    obj_size = obj['size']
-    etag = obj['eTag']
+    obj_size = obj.get('size', 0)   # delete event might not hold it
+    etag = obj.get('eTag', '')
     op = event['eventName']
     timestamp = event['eventTime']
     
     fifo_seq_dec = int(fifo_seq)
     bilog_key = hex(fifo_seq_dec).lstrip('0x').rstrip('L').zfill(20)
     
-    shard_id = ceph_str_hash_linux(obj_key) % env_params.bilog_num_shards
+    bucket_shard_id = ceph_str_hash_linux(obj_key) % env_params.bilog_num_shards
     
-    bilog = BILog(bucket, shard_id)
+    bilog = BILog(bucket, bucket_shard_id)
     
     success = bilog.store_entry(bilog_key,
                       bucket, obj_key, obj_size,
                       etag, op, timestamp)
     
     if success:
-        dl = DataLog(bucket, shard_id, env_params.bilog_num_shards, timestamp)
+        dl = DataLog(bucket, bucket_shard_id, env_params.bilog_num_shards, timestamp)
         
         dl.store_entries()
     

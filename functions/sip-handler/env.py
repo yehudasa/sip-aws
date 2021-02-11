@@ -8,15 +8,15 @@ logger.setLevel(logging.INFO)
 
 class Params:
    def __init__(self):
-        self.db_prefix = os.environ.get('DB_PREFIX') or ''
+        self.db_prefix = os.environ.get('DB_PREFIX', '')
+        self.obj_order_table = self.db_prefix + os.environ.get('DYNAMODB_ORDER_TABLE', 's3_obj_order')
 
-        self.obj_order_table = self.db_prefix + (os.environ.get('DYNAMODB_ORDER_TABLE') or 's3_obj_order')
+        self.datalog_window_size = int(os.environ.get('DATALOG_WINDOW_SIZE', '30'))
+        self.datalog_num_shards = int(os.environ.get('DATALOG_NUM_SHARDS', '16'))
 
-        self.datalog_window_size = int(os.environ.get('DATALOG_WINDOW_SIZE') or '30')
-        self.datalog_num_shards = int(os.environ.get('DATALOG_NUM_SHARDS') or '16')
-
-        self.bilog_num_shards = int(os.environ.get('BILOG_NUM_SHARDS') or '16')
-
+        self.bilog_num_shards = int(os.environ.get('BILOG_NUM_SHARDS', '16'))
         
-        
+        self.top_level_bucket = os.environ.get('TOP_LEVEL_BUCKET', 'sip-default-bucket')
+
+
 env_params = Params()
