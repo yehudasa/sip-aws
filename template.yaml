@@ -14,7 +14,7 @@ Globals:
           - - !Ref AWS::StackName
             - '.'
 Resources:
-  requeueinfifo:
+  SIPRequeue:
     Type: 'AWS::Serverless::Function'
     Properties:
       CodeUri: functions/sip-requeue
@@ -45,7 +45,7 @@ Resources:
         Variables:
           SQS_NUM_MESSAGE_GROUPS: '16'
           SQS_TARGET_URL: !Ref SQSQueue1
-  s3logevent:
+  SIPHandler:
     Type: 'AWS::Serverless::Function'
     Properties:
       CodeUri: functions/sip-handler
@@ -61,10 +61,10 @@ Resources:
                 - SQSQueue1
                 - Arn
             BatchSize: 10
-  siprest:
+  SIPAPI:
     Type: 'AWS::Serverless::Function'
     Properties:
-      CodeUri: functions/sip-rest
+      CodeUri: functions/sip-api
       Description: ''
       Events:
         Api1:
