@@ -66,6 +66,12 @@ Resources:
     Properties:
       CodeUri: functions/sip-api
       Description: ''
+      Policies:
+        - AmazonDynamoDBFullAccess
+        - Statement:
+            Action: [ 's3:*' ]
+            Effect: 'Allow'
+            Resource: '*'
       Events:
         Api1:
           Type: Api
