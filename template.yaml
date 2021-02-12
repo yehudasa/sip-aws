@@ -13,6 +13,8 @@ Globals:
           - ''
           - - !Ref AWS::StackName
             - '.'
+        BILOG_NUM_SHARDS: 16
+        DATALOG_NUM_SHARDS: 16
 Resources:
   SIPRequeue:
     Type: 'AWS::Serverless::Function'
@@ -27,23 +29,17 @@ Resources:
             QueueName:
               !GetAtt SQSQueue1.QueueName
       Events:
-        BucketEvent1:
-          Type: S3
-          Properties:
-            Bucket:
-              Ref: Bucket1
-            Events:
-              - 's3:ObjectRemoved:*'
-        BucketEvent2:
+        BucketEvents:
           Type: S3
           Properties:
             Bucket:
               Ref: Bucket1
             Events:
               - 's3:ObjectCreated:*'
+              - 's3:ObjectRemoved:*'
       Environment:
         Variables:
-          SQS_NUM_MESSAGE_GROUPS: '16'
+          SQS_NUM_MESSAGE_GROUPS: 16
           SQS_TARGET_URL: !Ref SQSQueue1
   SIPHandler:
     Type: 'AWS::Serverless::Function'
