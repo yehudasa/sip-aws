@@ -3,8 +3,8 @@ import os
 import sys
 
 logger = logging.getLogger()
-# logger.setLevel(logging.INFO)
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logger.setLevel(logging.INFO)
+# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 
 dynamodb_url='http://localhost:8100'

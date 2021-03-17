@@ -3,6 +3,7 @@ import boto3
 
 from sip_data import SIPDataFull, SIPDataInc
 from sip_bucket import SIPBucketFull, SIPBucketInc
+from sip_trim import SIPMarkerHandler
 
 from env import *
 
@@ -83,6 +84,38 @@ class SIPFetch:
 
         return pvd.fetch(opt_stage_id, shard_id, marker, max_entries)
 
+class SIPSetMarkerInfo:
+    def __init__(self, env, provider, body):
+        self.env = env
+        self.provider = provider
+        self.body = body
+
+    def exec(self):
+        params = self.env.params
+        opt_instance = params.get('instance')
+        opt_stage_id = params.get('stage-id')
+        shard_id = int(params.get('shard-id', '0'))
+
+        try:
+            body_dict = json.loads(self.body)
+
+            target_id = body_dict['target_id']
+            marker = body_dict['marker']
+            mtime = body_dict['mtime']
+            check_exists = bool(body_dict['check_exists'])
+        except:
+            return (400, {})
+
+        handler = SIPMarkerHandler(self.env,
+                                   self.provider,
+                                   opt_instance,
+                                   opt_stage_id,
+                                   shard_id)
+
+        return handler.set_target_info(target_id,
+                                       marker,
+                                       mtime,
+                                       check_exists)
 
 
 class HttpGet:
@@ -112,11 +145,39 @@ class HttpGet:
             op = SIPFetch(self.env, opt_provider)
 
         return op.exec()
-        
-        return (405, {})
+
+
+class HttpPut:
+    def __init__(self, event, env):
+        self.event = event
+        self.env = env
+
+    def exec(self):
+        params = self.env.params
+
+        opt_provider = params.get('provider')
+        opt_marker_info = params.get('marker-info')
+
+        body = self.event['body']
+
+        if not opt_provider or not body:
+            return (405, {})
+
+        op = None
+
+        if opt_marker_info is not None:
+            op = SIPSetMarkerInfo(self.env, opt_provider, body)
+
+        if not op:
+            return (405, {})
+
+        return op.exec()
     
 
 def lambda_handler(event, context):
+
+    logger.info('### event:')
+    logger.info(json.dumps(event))
 
     if not env_params.valid():
         return {
@@ -132,6 +193,8 @@ def lambda_handler(event, context):
     
     if method == 'GET':
         handler = HttpGet(env)
+    elif method == 'PUT':
+        handler = HttpPut(event, env)
     else:
         handler = None
     

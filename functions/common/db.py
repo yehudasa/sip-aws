@@ -30,8 +30,9 @@ def _get_table(table_name, settings_cb):
             #}
         )
     except:
-        table = dynamodb.Table(table_name)
-        status = table.table_status
+        # table = dynamodb.Table(table_name)
+        # status = table.table_status
+        raise
         
     return table
 
