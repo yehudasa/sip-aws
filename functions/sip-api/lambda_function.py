@@ -112,10 +112,27 @@ class SIPSetMarkerInfo:
                                    opt_stage_id,
                                    shard_id)
 
-        return handler.set_target_info(target_id,
+        if not handler.set_target_info(target_id,
                                        marker,
                                        mtime,
-                                       check_exists)
+                                       check_exists):
+            return (400, {})
+        
+        min_marker = handler.read_min_marker()
+        
+        logger.info('after update: target_id=%s marker=%s, min_marker=%s'  % (target_id, marker, min_marker))
+        
+        if min_marker < marker:
+            # all done, min marker is smaller, can't trim
+            return (200, {})
+        
+        pvd = self.env.find_provider(self.provider, opt_instance)
+        if not pvd:
+             return (404, {})
+        
+        return pvd.trim(opt_stage_id, shard_id, min_marker)
+        
+        
 
 
 class HttpGet:

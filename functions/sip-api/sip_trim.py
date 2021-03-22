@@ -120,5 +120,5 @@ class SIPMarkerHandler:
             # return (500, {})
             raise
 
-        return (200, {})
+        return True
 

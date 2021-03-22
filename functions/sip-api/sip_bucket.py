@@ -119,6 +119,9 @@ class SIPBucketFull:
 
         return (200, result)
 
+    def trim(self, stage_id, shard_id, marker):
+        return (200, {})
+
 
 class SIPBucketInc:
     def __init__(self, env, instance):
@@ -232,4 +235,29 @@ class SIPBucketInc:
 
         return (200, result)
 
+    def trim(self, stage_id, shard_id, marker):
 
+        bilog_table = self.get_table()
+
+        bucket_shard_id = self.bucket + '.' + str(shard_id)
+
+        cond = Key('bucket_shard_id').eq(bucket_shard_id)
+        if marker:
+            cond &= Key('entry_id').lte(marker)
+
+        result = bilog_table.query(KeyConditionExpression=cond)
+
+        logger.info('bilog scanned %s (max marker=%s), found %d items'  % (bucket_shard_id, marker, len(result['Items'])))
+
+        with bilog_table.batch_writer() as batch:
+            for item in result['Items']:
+                
+                entry_id = item['entry_id']
+                logger.info('removing %s:%s'  % (bucket_shard_id, entry_id))
+
+                key = { 'bucket_shard_id': bucket_shard_id,
+                        'entry_id': entry_id }
+                
+                batch.delete_item(Key=key)
+
+        return (200, {})

@@ -91,6 +91,8 @@ class SIPDataFull:
 
         return (200, result)
 
+    def trim(self, stage_id, shard_id, marker):
+        return (200, {})
 
 class SIPDataInc:
     def __init__(self, env):
@@ -186,7 +188,27 @@ class SIPDataInc:
         }
 
 
-
         return (200, result)
 
+    def trim(self, stage_id, shard_id, marker):
 
+        datalog_table = self.get_table()
+
+        cond = Key('shard_id').eq(shard_id)
+        if marker:
+            cond &= Key('entry_id').lte(marker)
+            
+        result = datalog_table.query(KeyConditionExpression=cond)
+    
+        with datalog_table.batch_writer() as batch:
+            for item in result['Items']:
+                
+                entry_id = item['entry_id']
+                logger.info('item=%s'  % (entry_id))
+
+                key = { 'shard_id': shard_id,
+                        'entry_id': entry_id }
+                
+                batch.delete_item(Key=key)
+
+        return (200, {})
